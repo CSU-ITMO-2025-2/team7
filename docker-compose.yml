@@ -1,0 +1,54 @@
+# Docker Compose для ML инфраструктуры проекта Boston Housing
+# Запуск из корня проекта: docker-compose up -d
+
+services:
+  # MinIO - S3-совместимое хранилище для данных и моделей
+  minio:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.minio
+    container_name: boston_housing_minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console
+    volumes:
+      - ./minio_data:/data
+    env_file:
+      - .env
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - boston_housing_network
+
+  # ML Application - обучение модели Random Forest
+  train:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    container_name: boston_housing_train
+    volumes:
+      # Монтируем данные (входные)
+      - ./data/raw:/app/data/raw:ro
+      # Монтируем директории для сохранения результатов
+      - ./data/models:/app/data/models
+      - ./dvclive:/app/dvclive
+      - ./data/experiments:/app/data/experiments
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - boston_housing_network
+    # Не запускается автоматически (только по требованию)
+    profiles:
+      - train
+
+networks:
+  boston_housing_network:
+    driver: bridge

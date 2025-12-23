@@ -1,0 +1,27 @@
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.14.6
+  hooks:
+    # Run the linter.
+    - id: ruff-check
+      types_or: [ python, pyi ]
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+      types_or: [ python, pyi ]
+
+# DVC - версионирование данных
+# - repo: https://github.com/iterative/dvc
+#   rev: 3.56.0
+#   hooks:
+#     # Проверка что .dvc файлы синхронизированы с данными
+#     - id: dvc-pre-commit
+#       stages: [pre-commit]
+#     # Проверка при push что данные загружены в remote
+#     - id: dvc-pre-push
+#       stages: [pre-push]
+#     # Восстановление данных после checkout
+#     - id: dvc-post-checkout
+#       stages: [post-checkout]
+#       always_run: true

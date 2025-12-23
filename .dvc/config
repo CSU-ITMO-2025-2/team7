@@ -1,0 +1,9 @@
+[core]
+    remote = minio
+['remote "minio"']
+    url = s3://boston-housing-data
+    endpointurl = http://localhost:9000
+    use_ssl = false
+# Credentials хранятся в .dvc/config.local (не коммитится в git)
+# Выполните: dvc remote modify --local minio access_key_id <YOUR_KEY>
+# Выполните: dvc remote modify --local minio secret_access_key <YOUR_SECRET>

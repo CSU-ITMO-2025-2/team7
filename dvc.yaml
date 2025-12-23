@@ -1,0 +1,11 @@
+params:
+- dvclive/params.yaml
+metrics:
+- dvclive/metrics.json
+plots:
+- dvclive/plots/metrics:
+    x: step
+artifacts:
+  random_forest:
+    path: data/models/random_forest.pkl
+    type: model
