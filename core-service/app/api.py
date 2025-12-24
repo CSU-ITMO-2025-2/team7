@@ -76,6 +76,11 @@ async def _validate_csv(file: UploadFile) -> tuple[bytes, list[str]]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="csv must contain header row"
             )
+        normalized_headers = [header.strip() for header in headers]
+        if not any(header.lower() == "target" for header in normalized_headers):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="csv must contain target column"
+            )
         if len(headers) > 50:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="csv must have at most 50 columns"
