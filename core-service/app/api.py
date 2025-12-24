@@ -113,9 +113,9 @@ async def create_dataset(
 
     file_bytes, _ = await _validate_csv(file)
     key = f"{user_id}/{dataset_name}/{dataset_name}.csv"
-    s3_path = f"s3://{settings.s3_bucket}/{key}"
+    s3_path = f"s3://{settings.s3.bucket}/{key}"
 
-    await s3_client.put_object(Bucket=settings.s3_bucket, Key=key, Body=file_bytes)
+    await s3_client.put_object(Bucket=settings.s3.bucket, Key=key, Body=file_bytes)
 
     dataset = Dataset(user_id=user_id, name=dataset_name, s3_path=s3_path)
     session.add(dataset)
