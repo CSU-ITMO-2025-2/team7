@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from .models import RunStatus
 
 
 class UserCreate(BaseModel):
-    login: str = Field(..., min_length=3, max_length=255)
-    password: str = Field(..., min_length=6, max_length=255)
+    login: str
+    password: str
 
 
 class UserOut(BaseModel):

@@ -4,7 +4,8 @@ import io
 from confluent_kafka import KafkaException
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+from argon2.exceptions import VerificationError, VerifyMismatchError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,12 +26,12 @@ from .schemas import (
 )
 
 router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_hasher = PasswordHasher()
 
 
 @router.post("/auth/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_session)):
-    hashed_password = pwd_context.hash(payload.password)
+    hashed_password = pwd_hasher.hash(payload.password)
     user = User(login=payload.login, password_hash=hashed_password)
     session.add(user)
     try:
@@ -47,7 +48,12 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_session)
 ):
     user = await session.scalar(select(User).where(User.login == form_data.username))
-    if user is None or not pwd_context.verify(form_data.password, user.password_hash):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+
+    try:
+        pwd_hasher.verify(user.password_hash, form_data.password)
+    except (VerifyMismatchError, VerificationError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
     token = create_access_token(user_id=user.id)
     return Token(access_token=token)
