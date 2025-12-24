@@ -21,10 +21,9 @@ class PostgresSettings(BaseSettings):
 
 class S3Settings(BaseSettings):
     bucket: str
-    endpoint_url: str | None = None
-    region: str = "us-east-1"
-    access_key_id: str | None = None
-    secret_access_key: str | None = None
+    endpoint_url: str
+    access_key_id: str
+    secret_access_key: str
 
     model_config = SettingsConfigDict(env_prefix="S3_", extra="ignore", env_file=".env")
 

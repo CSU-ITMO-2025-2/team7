@@ -13,7 +13,6 @@ _producer: Producer | None = None
 async def get_s3_client():
     async with _aio_session.create_client(
         "s3",
-        region_name=settings.s3.region,
         endpoint_url=settings.s3.endpoint_url,
         aws_access_key_id=settings.s3.access_key_id,
         aws_secret_access_key=settings.s3.secret_access_key,
