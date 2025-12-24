@@ -1,11 +1,22 @@
-from pydantic import Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class PostgresSettings(BaseSettings):
-    url: str
+    host: str
+    port: int
+    user: str
+    password: str
+    database: str
 
     model_config = SettingsConfigDict(env_prefix="POSTGRES_", extra="ignore", env_file=".env")
+
+    @property
+    def async_url(self) -> str:
+        return (
+            f"postgresql+psycopg_async://{self.user}:{self.password}"
+            f"@{self.host}:{self.port}/{self.database}"
+        )
 
 
 class S3Settings(BaseSettings):
