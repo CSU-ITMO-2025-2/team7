@@ -7,6 +7,7 @@ import pickle
 import signal
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -64,6 +65,13 @@ def _create_consumer() -> Consumer:
     )
     consumer.subscribe([settings.kafka.topic_name])
     return consumer
+
+
+def _create_http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        base_url=settings.core_service.base_url,
+        timeout=httpx.Timeout(10, read=30),
+    )
 
 
 def _create_access_token(user_id: int) -> str:
@@ -212,10 +220,7 @@ async def _process_message(message: RunMessage, http_client: httpx.AsyncClient) 
 
 async def _consume(stop_event: asyncio.Event) -> None:
     consumer = _create_consumer()
-    async with httpx.AsyncClient(
-        base_url=settings.core_service.base_url,
-        timeout=httpx.Timeout(10, read=30),
-    ) as http_client:
+    async with _create_http_client() as http_client:
         try:
             while not stop_event.is_set():
                 msg = await asyncio.to_thread(consumer.poll, 1.0)
@@ -243,10 +248,28 @@ async def _consume(stop_event: asyncio.Event) -> None:
             consumer.close()
 
 
+def _load_local_message() -> RunMessage:
+    if settings.train.message_json:
+        raw = settings.train.message_json.encode("utf-8")
+    elif settings.train.message_path:
+        raw = Path(settings.train.message_path).read_bytes()
+    else:
+        raise ValueError("TRAIN_MESSAGE_JSON or TRAIN_MESSAGE_PATH must be set for local mode")
+    return _parse_message(raw)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    stop_event = asyncio.Event()
+    mode = (settings.train.mode or "kafka").lower()
+    if mode == "local":
+        run_message = _load_local_message()
+        async with _create_http_client() as http_client:
+            await _process_message(run_message, http_client)
+        return
+    if mode != "kafka":
+        raise ValueError("TRAIN_MODE must be either 'kafka' or 'local'")
 
+    stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
