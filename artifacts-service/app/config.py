@@ -19,19 +19,21 @@ class PostgresSettings(BaseSettings):
         )
 
 
-class AuthSettings(BaseSettings):
-    secret: str = "secret"
-    algorithm: str = "HS256"
-    expires_minutes: int = 60
+class S3Settings(BaseSettings):
+    bucket: str = "datasets"
+    endpoint_url: str = "http://minio:9000"
+    access_key_id: str = "admin"
+    secret_access_key: str = "admin123"
 
-    model_config = SettingsConfigDict(env_prefix="JWT_", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="S3_", extra="ignore")
 
 
 class Settings(BaseSettings):
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
-    auth: AuthSettings = Field(default_factory=AuthSettings)
+    s3: S3Settings = Field(default_factory=S3Settings)
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
 
 settings = Settings()
+
