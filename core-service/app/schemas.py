@@ -20,15 +20,9 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
-class DatasetOut(BaseModel):
-    id: int
-    user_id: int
-    name: str
-    s3_path: str
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 
 class RunCreate(BaseModel):
@@ -46,12 +40,3 @@ class RunOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class RunStatusUpdate(BaseModel):
-    status: RunStatus
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"

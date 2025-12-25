@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:17.2-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  core-service-migrations:
+    build:
+      context: ./core-service
+      dockerfile: Dockerfile
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  core-service:
+    build:
+      context: ./core-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      core-service-migrations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  artifacts-service-migrations:
+    build:
+      context: ./artifacts-service
+      dockerfile: Dockerfile
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPIC_NAME: ${KAFKA_TOPIC_NAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      core-service-migrations:
+        condition: service_completed_successfully
+    restart: "no"
+
+  artifacts-service:
+    build:
+      context: ./artifacts-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPIC_NAME: ${KAFKA_TOPIC_NAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      artifacts-service-migrations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  core-service-frontend:
+    build:
+      context: ./core-service-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - core-service
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  minio_data:
+
