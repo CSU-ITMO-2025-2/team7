@@ -7,7 +7,6 @@ import pickle
 import signal
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -70,7 +69,7 @@ def _create_consumer() -> Consumer:
 def _create_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
         base_url=settings.core_service.base_url,
-        timeout=httpx.Timeout(10, read=30),
+        # timeout=httpx.Timeout(10, read=30),
     )
 
 
@@ -85,6 +84,7 @@ def _create_access_token(user_id: int) -> str:
 
 
 async def _update_run_status(client: httpx.AsyncClient, run_id: int, status: str, token: str) -> None:
+    print(f"Updating run {run_id} status to {status}")
     response = await client.post(
         f"/runs/{run_id}/status",
         json={"status": status},
@@ -106,6 +106,7 @@ def _extract_s3_path(s3_path: str) -> tuple[str, str]:
 
 async def _download_dataset(s3_path: str) -> bytes:
     bucket, key = _extract_s3_path(s3_path)
+    print("Downloading dataset from", bucket, key, settings.s3.access_key_id, settings.s3.secret_access_key)
     async with _s3_session.create_client(
         "s3",
         endpoint_url=settings.s3.endpoint_url,
@@ -197,6 +198,7 @@ async def _upload_artifacts(run_id: int, model: LinearRegression, metrics: dict[
 
 async def _process_message(message: RunMessage, http_client: httpx.AsyncClient) -> None:
     token = _create_access_token(message.user_id)
+    print("user id:", message.user_id)
     await _update_run_status(http_client, message.run_id, "processing", token)
     try:
         dataset_bytes = await _download_dataset(message.dataset_s3_path)
@@ -248,26 +250,8 @@ async def _consume(stop_event: asyncio.Event) -> None:
             consumer.close()
 
 
-def _load_local_message() -> RunMessage:
-    if settings.train.message_json:
-        raw = settings.train.message_json.encode("utf-8")
-    elif settings.train.message_path:
-        raw = Path(settings.train.message_path).read_bytes()
-    else:
-        raise ValueError("TRAIN_MESSAGE_JSON or TRAIN_MESSAGE_PATH must be set for local mode")
-    return _parse_message(raw)
-
-
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    mode = (settings.train.mode or "kafka").lower()
-    if mode == "local":
-        run_message = _load_local_message()
-        async with _create_http_client() as http_client:
-            await _process_message(run_message, http_client)
-        return
-    if mode != "kafka":
-        raise ValueError("TRAIN_MODE must be either 'kafka' or 'local'")
 
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()

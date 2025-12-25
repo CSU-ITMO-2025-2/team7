@@ -20,7 +20,7 @@ class PostgresSettings(BaseSettings):
 
 
 class S3Settings(BaseSettings):
-    bucket: str = "datasets"
+    bucket: str = "core"
     endpoint_url: str = "http://localhost:9000"
     access_key_id: str = "admin"
     secret_access_key: str = "admin123"

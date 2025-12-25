@@ -12,8 +12,8 @@ class S3Settings(BaseSettings):
 
 
 class KafkaSettings(BaseSettings):
-    bootstrap_servers: str
-    topic_name: str
+    bootstrap_servers: str = "kafka:9092"
+    topic_name: str = "runs"
     group_id: str = "train-service"
     auto_offset_reset: str = "earliest"
 
@@ -21,27 +21,18 @@ class KafkaSettings(BaseSettings):
 
 
 class CoreServiceSettings(BaseSettings):
-    base_url: str
-    jwt_secret: str
+    base_url: str = "http://localhost:8000"
+    jwt_secret: str = "secret"
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60
 
     model_config = SettingsConfigDict(env_prefix="CORE_", extra="ignore", env_file=".env")
 
 
-class TrainSettings(BaseSettings):
-    mode: str = "local"  # allowed: kafka | local
-    message_json: str | None = None
-    message_path: str | None = "message.json"
-
-    model_config = SettingsConfigDict(env_prefix="TRAIN_", extra="ignore", env_file=".env")
-
-
 class Settings(BaseSettings):
     s3: S3Settings = Field(default_factory=S3Settings)
     kafka: KafkaSettings = Field(default_factory=KafkaSettings)
     core_service: CoreServiceSettings = Field(default_factory=CoreServiceSettings)
-    train: TrainSettings = Field(default_factory=TrainSettings)
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
