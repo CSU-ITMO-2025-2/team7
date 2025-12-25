@@ -55,6 +55,17 @@ async def login(
     return Token(access_token=token)
 
 
+@router.get("/auth/me", response_model=UserOut)
+async def get_current_user(
+    session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
+):
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+    return user
+
+
 @router.post("/runs", response_model=RunOut, status_code=status.HTTP_201_CREATED)
 async def create_run(
     payload: RunCreate,
