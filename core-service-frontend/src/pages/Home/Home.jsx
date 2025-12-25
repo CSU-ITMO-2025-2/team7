@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { runsService } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { runsService, datasetsService, authService } from '../../services/api';
 import { Input } from '../../components/Input/Input';
 import { Button } from '../../components/Button/Button';
 import { Alert } from '../../components/Alert/Alert';
@@ -7,17 +8,33 @@ import { Card } from '../../components/Card/Card';
 import './Home.css';
 
 export const Home = () => {
+  const navigate = useNavigate();
   const [runs, setRuns] = useState([]);
+  const [datasets, setDatasets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRuns, setIsLoadingRuns] = useState(true);
+  const [isLoadingDatasets, setIsLoadingDatasets] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [datasetId, setDatasetId] = useState('');
   const [configuration, setConfiguration] = useState('{}');
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    loadRuns();
+    loadUserAndData();
   }, []);
+
+  const loadUserAndData = async () => {
+    try {
+      const user = await authService.getCurrentUser();
+      setUserId(user.id);
+      await Promise.all([loadRuns(), loadDatasets(user.id)]);
+    } catch (err) {
+      setError('Не удалось загрузить данные: ' + err.message);
+      setIsLoadingRuns(false);
+      setIsLoadingDatasets(false);
+    }
+  };
 
   const loadRuns = async () => {
     setIsLoadingRuns(true);
@@ -31,13 +48,25 @@ export const Home = () => {
     }
   };
 
+  const loadDatasets = async (uid) => {
+    setIsLoadingDatasets(true);
+    try {
+      const data = await datasetsService.getDatasets(uid);
+      setDatasets(data);
+    } catch (err) {
+      setError('Не удалось загрузить список датасетов: ' + err.message);
+    } finally {
+      setIsLoadingDatasets(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
     if (!datasetId) {
-      setError('Введите ID датасета');
+      setError('Выберите датасет');
       return;
     }
 
@@ -99,33 +128,52 @@ export const Home = () => {
               {success}
             </Alert>
           )}
-          <form onSubmit={handleSubmit}>
-            <Input
-              label="ID датасета"
-              type="number"
-              value={datasetId}
-              onChange={(e) => setDatasetId(e.target.value)}
-              required
-              placeholder="Введите ID датасета"
-            />
-            <div className="input-group">
-              <label className="input-label">Configuration (JSON)</label>
-              <textarea
-                className="input"
-                value={configuration}
-                onChange={(e) => setConfiguration(e.target.value)}
-                placeholder='{"param": "value"}'
-              />
-            </div>
-            <div className="form-actions">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Создание...' : 'Создать запуск'}
-              </Button>
-              <Button type="button" variant="secondary" onClick={loadRuns} disabled={isLoadingRuns}>
-                Обновить список
+          {isLoadingDatasets ? (
+            <div className="loading">Загрузка датасетов...</div>
+          ) : datasets.length === 0 ? (
+            <div className="no-datasets-message">
+              <p>У вас пока нет датасетов. Сначала загрузите датасет.</p>
+              <Button onClick={() => navigate('/datasets')}>
+                Перейти к загрузке датасетов
               </Button>
             </div>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="input-group">
+                <label className="input-label">Выберите датасет</label>
+                <select
+                  className="input select-input"
+                  value={datasetId}
+                  onChange={(e) => setDatasetId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Выберите датасет --</option>
+                  {datasets.map((dataset) => (
+                    <option key={dataset.id} value={dataset.id}>
+                      {dataset.name} (ID: {dataset.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Configuration (JSON)</label>
+                <textarea
+                  className="input"
+                  value={configuration}
+                  onChange={(e) => setConfiguration(e.target.value)}
+                  placeholder='{"param": "value"}'
+                />
+              </div>
+              <div className="form-actions">
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Создание...' : 'Создать запуск'}
+                </Button>
+                <Button type="button" variant="secondary" onClick={loadRuns} disabled={isLoadingRuns}>
+                  Обновить список
+                </Button>
+              </div>
+            </form>
+          )}
         </Card>
       </section>
 

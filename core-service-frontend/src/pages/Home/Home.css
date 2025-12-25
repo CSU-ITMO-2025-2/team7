@@ -97,3 +97,18 @@
   color: #666;
 }
 
+.select-input {
+  cursor: pointer;
+}
+
+.no-datasets-message {
+  text-align: center;
+  padding: 2rem;
+}
+
+.no-datasets-message p {
+  margin-bottom: 1rem;
+  color: #666;
+  font-size: 1rem;
+}
+

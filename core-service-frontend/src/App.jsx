@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute/ProtectedRoute';
 import { Login } from './pages/Login/Login';
 import { Register } from './pages/Register/Register';
 import { Home } from './pages/Home/Home';
+import { Datasets } from './pages/Datasets/Datasets';
 import './App.css';
 
 const AppRoutes = () => {
@@ -22,6 +23,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/datasets"
+        element={
+          <ProtectedRoute>
+            <Datasets />
           </ProtectedRoute>
         }
       />

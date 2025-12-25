@@ -42,6 +42,19 @@ export const authService = {
     return data;
   },
 
+  async getCurrentUser() {
+    const response = await fetch(`${API_BASE}/auth/me`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'Не удалось получить информацию о пользователе');
+    }
+
+    return response.json();
+  },
+
   logout() {
     localStorage.removeItem('coreServiceToken');
   },
@@ -52,6 +65,40 @@ export const authService = {
 
   isAuthenticated() {
     return Boolean(this.getToken());
+  },
+};
+
+export const datasetsService = {
+  async uploadDataset(name, file, userId) {
+    const formData = new FormData();
+    formData.append('dataset_name', name);
+    formData.append('file', file);
+    formData.append('user_id', userId);
+
+    const response = await fetch('http://localhost:8001/datasets', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'Не удалось загрузить датасет');
+    }
+
+    return response.json();
+  },
+
+  async getDatasets(userId) {
+    const response = await fetch(`http://localhost:8001/datasets?user_id=${userId}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'Не удалось получить список датасетов');
+    }
+
+    return response.json();
   },
 };
 
