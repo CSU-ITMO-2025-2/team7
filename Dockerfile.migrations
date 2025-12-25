@@ -1,0 +1,22 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install uv
+
+# Устанавливаем зависимости из корневого pyproject.toml (включают все необходимое для миграций)
+COPY pyproject.toml ./
+RUN uv sync
+
+# Копируем код обоих сервисов (нужны для импорта моделей)
+COPY core-service ./core-service
+COPY artifacts-service ./artifacts-service
+
+# Копируем структуру миграций из корня
+COPY alembic.ini ./
+COPY alembic ./alembic
+
+WORKDIR /app
+
+CMD ["uv", "run", "alembic", "upgrade", "head"]
+
