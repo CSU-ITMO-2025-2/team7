@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   postgres:
@@ -18,12 +16,26 @@ services:
       timeout: 5s
       retries: 5
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+
   minio:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -70,6 +82,22 @@ services:
       timeout: 5s
       retries: 5
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      kafka:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+    restart: unless-stopped
+
   migrations:
     build:
       context: .
@@ -109,6 +137,26 @@ services:
       kafka:
         condition: service_healthy
     restart: unless-stopped
+
+  train-service:
+    build:
+      context: ./train-service
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPIC: ${KAFKA_TOPIC_NAME}
+      CORE_BASE_URL: http://core-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    # restart: unless-stopped
 
   artifacts-service:
     build:
@@ -151,6 +199,6 @@ services:
 
 volumes:
   postgres_data:
+  pgadmin_data:
   minio_data:
   kafka_data:
-
