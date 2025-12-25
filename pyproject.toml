@@ -4,9 +4,38 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.14.0",
+    "isort>=7.0.0",
     "psycopg[binary,pool]>=3.3.2",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.12.0",
+    "ruff>=0.14.10",
     "sqlalchemy[asyncio,postgresql-asyncpg]>=2.0.45",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C4", # flake8-comprehensions
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "W293"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
 
