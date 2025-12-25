@@ -123,7 +123,7 @@ async def create_dataset(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
 
     file_bytes, _ = await _validate_csv(file)
-    key = f"{user_id}/{dataset_name}/{dataset_name}.csv"
+    key = f"datasets/{user_id}/{dataset_name}/data.csv"
     s3_path = f"s3://{settings.s3.bucket}/{key}"
 
     await s3_client.put_object(Bucket=settings.s3.bucket, Key=key, Body=file_bytes)
