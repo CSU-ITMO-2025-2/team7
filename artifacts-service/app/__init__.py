@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import router
 
-app = FastAPI(title="Distributed Core Service")
+app = FastAPI(title="Artifacts Service")
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,5 +13,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(router)
+

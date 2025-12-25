@@ -1,0 +1,138 @@
+.datasets {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.datasets-section {
+  margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-input:hover {
+  border-color: #007bff;
+  background-color: #f0f7ff;
+}
+
+.file-name {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #e9f5ff;
+  border-left: 4px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #333;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-size: 1rem;
+}
+
+.datasets-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.dataset-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dataset-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.dataset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dataset-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.dataset-id {
+  font-size: 0.875rem;
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+}
+
+.dataset-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dataset-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dataset-info-label {
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.dataset-s3-path {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #333;
+  background-color: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+@media (max-width: 768px) {
+  .datasets {
+    padding: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .dataset-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+

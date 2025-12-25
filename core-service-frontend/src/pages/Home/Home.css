@@ -1,0 +1,114 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.runs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.run-card {
+  transition: box-shadow 0.2s;
+}
+
+.run-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.run-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.run-id {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.run-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  text-transform: uppercase;
+}
+
+.run-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.run-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.run-info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.run-config {
+  background-color: #f5f5f5;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+
+.select-input {
+  cursor: pointer;
+}
+
+.no-datasets-message {
+  text-align: center;
+  padding: 2rem;
+}
+
+.no-datasets-message p {
+  margin-bottom: 1rem;
+  color: #666;
+  font-size: 1rem;
+}
+
