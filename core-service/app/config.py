@@ -27,9 +27,24 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="JWT_", extra="ignore")
 
 
+class KafkaSettings(BaseSettings):
+    bootstrap_servers: str = "kafka:9092"
+    topic: str = "runs"
+
+    model_config = SettingsConfigDict(env_prefix="KAFKA_", extra="ignore")
+
+
+class ArtifactsServiceSettings(BaseSettings):
+    url: str = "http://localhost:8001"
+
+    model_config = SettingsConfigDict(env_prefix="ARTIFACTS_SERVICE_", extra="ignore")
+
+
 class Settings(BaseSettings):
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    kafka: KafkaSettings = Field(default_factory=KafkaSettings)
+    artifacts_service: ArtifactsServiceSettings = Field(default_factory=ArtifactsServiceSettings)
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 

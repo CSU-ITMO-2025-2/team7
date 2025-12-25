@@ -30,6 +30,10 @@ class RunCreate(BaseModel):
     configuration: dict[str, Any]
 
 
+class RunStatusUpdate(BaseModel):
+    status: RunStatus
+
+
 class RunOut(BaseModel):
     id: int
     user_id: int
