@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Core Service — Запуски</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Мои запуски</h1>
+        <div class="muted">API: http://localhost:8000</div>
+      </div>
+      <nav>
+        <a href="index.html">Главная</a>
+        <a href="runs.html">Запуски</a>
+        <a href="#" id="logoutBtn">Выйти</a>
+      </nav>
+    </header>
+
+    <main>
+      <section>
+        <h2>Статус</h2>
+        <div id="status" class="alert">Требуется войти</div>
+        <div class="muted">Токен хранится в localStorage (ключ coreServiceToken).</div>
+      </section>
+
+      <section data-auth class="hidden">
+        <div class="inline-actions" style="margin-bottom: 10px">
+          <button id="refreshRuns">Обновить список</button>
+          <a class="button-like" href="index.html">К датасетам</a>
+        </div>
+        <div id="runsMessage" class="alert hidden"></div>
+        <div id="runsList" class="list"></div>
+      </section>
+    </main>
+
+    <script>
+      const API_BASE = "http://localhost:8000";
+      const TOKEN_KEY = "coreServiceToken";
+
+      const els = {
+        status: document.getElementById("status"),
+        logoutBtn: document.getElementById("logoutBtn"),
+        refreshRuns: document.getElementById("refreshRuns"),
+        runsList: document.getElementById("runsList"),
+        runsMessage: document.getElementById("runsMessage"),
+      };
+
+      function getToken() {
+        return localStorage.getItem(TOKEN_KEY);
+      }
+
+      function authHeaders() {
+        const token = getToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      }
+
+      function updateAuthVisibility() {
+        const hasToken = Boolean(getToken());
+        els.status.textContent = hasToken ? "Токен найден, можно запрашивать запуски" : "Требуется войти";
+        document.querySelectorAll("[data-auth]").forEach((block) => {
+          block.classList.toggle("hidden", !hasToken);
+        });
+      }
+
+      function showMessage(el, text, isError = false) {
+        if (!el) return;
+        el.textContent = text;
+        el.classList.remove("hidden");
+        el.classList.toggle("error", isError);
+      }
+
+      function clearMessage(el) {
+        if (!el) return;
+        el.textContent = "";
+        el.classList.add("hidden");
+        el.classList.remove("error");
+      }
+
+      function renderRuns(items) {
+        if (!els.runsList) return;
+        els.runsList.innerHTML = "";
+        if (!items.length) {
+          const empty = document.createElement("div");
+          empty.className = "muted";
+          empty.textContent = "Запусков пока нет";
+          els.runsList.appendChild(empty);
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        items.forEach((run) => {
+          const created = new Date(run.created_at).toLocaleString();
+          const card = document.createElement("div");
+          card.className = "card";
+          const statusRow = document.createElement("div");
+          statusRow.className = "status";
+
+          const status = document.createElement("span");
+          status.className = "pill";
+          status.textContent = run.status;
+          statusRow.appendChild(status);
+
+          const meta = document.createElement("span");
+          meta.className = "muted";
+          meta.textContent = `#${run.id} • датасет ${run.dataset_id}`;
+          statusRow.appendChild(meta);
+
+          const createdEl = document.createElement("div");
+          createdEl.className = "muted";
+          createdEl.textContent = created;
+
+          const config = document.createElement("pre");
+          config.style.whiteSpace = "pre-wrap";
+          config.style.margin = "8px 0 0";
+          config.style.background = "#e2e8f0";
+          config.style.padding = "8px";
+          config.style.borderRadius = "6px";
+          config.textContent = JSON.stringify(run.configuration, null, 2);
+
+          card.appendChild(statusRow);
+          card.appendChild(createdEl);
+          card.appendChild(config);
+          fragment.appendChild(card);
+        });
+
+        els.runsList.appendChild(fragment);
+      }
+
+      async function loadRuns() {
+        if (!getToken()) return;
+        clearMessage(els.runsMessage);
+        els.runsList.textContent = "Загружаем...";
+        try {
+          const resp = await fetch(`${API_BASE}/runs`, { headers: { ...authHeaders() } });
+          const data = await resp.json().catch(() => []);
+          if (!resp.ok) {
+            const detail = data.detail || "Не удалось получить список запусков";
+            showMessage(els.runsMessage, detail, true);
+            els.runsList.innerHTML = "";
+            return;
+          }
+          renderRuns(Array.isArray(data) ? data : []);
+        } catch (error) {
+          showMessage(els.runsMessage, "Сеть недоступна", true);
+          els.runsList.innerHTML = "";
+        }
+      }
+
+      function bootstrap() {
+        updateAuthVisibility();
+        if (getToken()) {
+          loadRuns();
+        }
+      }
+
+      els.refreshRuns.addEventListener("click", loadRuns);
+      els.logoutBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        localStorage.removeItem(TOKEN_KEY);
+        updateAuthVisibility();
+        showMessage(els.runsMessage, "Токен очищен", false);
+        els.runsList.innerHTML = "";
+      });
+
+      bootstrap();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+[project]
+name = "core-service"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiobotocore>=3.0.0",
+    "argon2-cffi>=25.1.0",
+    "confluent-kafka>=2.12.2",
+    "fastapi[standard]>=0.127.0",
+    "psycopg[binary,pool]>=3.3.2",
+    "pydantic-settings>=2.12.0",
+    "python-jose[cryptography]>=3.5.0",
+    "sqlalchemy[asyncio,postgresql-asyncpg]>=2.0.45",
+]

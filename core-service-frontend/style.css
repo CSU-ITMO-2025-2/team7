@@ -1,0 +1,167 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: #f6f7fb;
+  color: #1f2933;
+}
+
+header {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+header nav a {
+  color: #cbd5e1;
+  text-decoration: none;
+  margin-left: 16px;
+}
+
+header nav a:hover {
+  color: #f8fafc;
+}
+
+main {
+  max-width: 960px;
+  margin: 32px auto;
+  padding: 0 16px 48px;
+}
+
+section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #f8fafc;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button.secondary {
+  background: #0f172a;
+}
+
+.button-like {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f8fafc;
+  text-decoration: none;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #e2e8f0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.muted {
+  color: #475569;
+  font-size: 12px;
+}
+
+.alert {
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fef9c3;
+  border: 1px solid #facc15;
+  color: #854d0e;
+  margin-bottom: 10px;
+}
+
+.alert.error {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.hidden {
+  display: none;
+}

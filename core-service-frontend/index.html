@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Core Service UI</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Core Service Playground</h1>
+        <div class="muted">API: http://localhost:8000</div>
+      </div>
+      <nav>
+        <a href="index.html">Главная</a>
+        <a href="runs.html">Мои запуски</a>
+        <a href="#" id="logoutBtn">Выйти</a>
+      </nav>
+    </header>
+
+    <main>
+      <section>
+        <h2>Статус</h2>
+        <div id="tokenStatus" class="alert">Требуется войти</div>
+      </section>
+
+      <section>
+        <h2>Регистрация</h2>
+        <div id="registerMessage" class="alert hidden"></div>
+        <form id="registerForm">
+          <div>
+            <label for="regLogin">Логин</label>
+            <input id="regLogin" name="login" type="text" placeholder="логин" required />
+          </div>
+          <div>
+            <label for="regPassword">Пароль</label>
+            <input
+              id="regPassword"
+              name="password"
+              type="password"
+              placeholder="минимум 6 символов"
+              required
+            />
+          </div>
+          <button type="submit">Создать пользователя</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>Вход</h2>
+        <div id="loginMessage" class="alert hidden"></div>
+        <form id="loginForm">
+          <div>
+            <label for="loginLogin">Логин</label>
+            <input id="loginLogin" name="login" type="text" placeholder="логин" required />
+          </div>
+          <div>
+            <label for="loginPassword">Пароль</label>
+            <input id="loginPassword" name="password" type="password" placeholder="пароль" required />
+          </div>
+          <button type="submit">Получить токен</button>
+        </form>
+      </section>
+
+      <section data-auth class="hidden">
+        <h2>Новый датасет</h2>
+        <div id="datasetMessage" class="alert hidden"></div>
+        <form id="datasetForm" enctype="multipart/form-data">
+          <div>
+            <label for="datasetName">Название</label>
+            <input
+              id="datasetName"
+              name="dataset_name"
+              type="text"
+              placeholder="например, customers_batch_1"
+              required
+            />
+          </div>
+          <div>
+            <label for="datasetFile">CSV файл (UTF-8)</label>
+            <input id="datasetFile" name="file" type="file" accept=".csv,text/csv" required />
+          </div>
+          <div class="inline-actions">
+            <button type="submit">Загрузить</button>
+            <button type="button" id="refreshDatasets" class="secondary">Обновить список</button>
+          </div>
+        </form>
+        <div id="datasetList" class="list" style="margin-top: 14px"></div>
+      </section>
+
+      <section data-auth class="hidden">
+        <h2>Создать запуск</h2>
+        <div id="runMessage" class="alert hidden"></div>
+        <form id="runForm">
+          <div>
+            <label for="datasetSelect">Датасет</label>
+            <select id="datasetSelect" required>
+              <option value="">Сначала загрузите или обновите список</option>
+            </select>
+          </div>
+          <div>
+            <label for="runConfig">Configuration (JSON)</label>
+            <textarea id="runConfig" placeholder='{"param": "value"}'></textarea>
+          </div>
+          <div class="inline-actions">
+            <button type="submit">Отправить в очередь</button>
+            <a class="secondary button-like" href="runs.html" style="text-decoration: none; padding: 10px 14px;">Смотреть запуски</a>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const API_BASE = "http://localhost:8000";
+      const TOKEN_KEY = "coreServiceToken";
+
+      const els = {
+        tokenStatus: document.getElementById("tokenStatus"),
+        logoutBtn: document.getElementById("logoutBtn"),
+        registerForm: document.getElementById("registerForm"),
+        registerMessage: document.getElementById("registerMessage"),
+        loginForm: document.getElementById("loginForm"),
+        loginMessage: document.getElementById("loginMessage"),
+        datasetForm: document.getElementById("datasetForm"),
+        datasetMessage: document.getElementById("datasetMessage"),
+        datasetList: document.getElementById("datasetList"),
+        refreshDatasets: document.getElementById("refreshDatasets"),
+        datasetSelect: document.getElementById("datasetSelect"),
+        runForm: document.getElementById("runForm"),
+        runMessage: document.getElementById("runMessage"),
+        runConfig: document.getElementById("runConfig"),
+      };
+
+      function showMessage(el, message, isError = false) {
+        if (!el) return;
+        el.textContent = message;
+        el.classList.remove("hidden");
+        el.classList.toggle("error", isError);
+      }
+
+      function clearMessage(el) {
+        if (!el) return;
+        el.textContent = "";
+        el.classList.add("hidden");
+        el.classList.remove("error");
+      }
+
+      function getToken() {
+        return localStorage.getItem(TOKEN_KEY);
+      }
+
+      function setToken(token) {
+        localStorage.setItem(TOKEN_KEY, token);
+        updateAuthVisibility();
+      }
+
+      function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+        updateAuthVisibility();
+      }
+
+      function authHeaders() {
+        const token = getToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      }
+
+      function updateAuthVisibility() {
+        const hasToken = Boolean(getToken());
+        els.tokenStatus.textContent = hasToken
+          ? "Токен сохранён в localStorage, можно работать."
+          : "Требуется войти";
+        document.querySelectorAll("[data-auth]").forEach((block) => {
+          block.classList.toggle("hidden", !hasToken);
+        });
+      }
+
+      async function handleRegister(event) {
+        event.preventDefault();
+        clearMessage(els.registerMessage);
+        const login = event.target.login.value.trim();
+        const password = event.target.password.value;
+        try {
+          const resp = await fetch(`${API_BASE}/auth/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ login, password }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            const detail = data.detail || "Не удалось зарегистрировать пользователя";
+            showMessage(els.registerMessage, detail, true);
+            return;
+          }
+          showMessage(
+            els.registerMessage,
+            `Создан пользователь ${data.login} (id: ${data.id}). Теперь войдите.`,
+            false
+          );
+          event.target.reset();
+        } catch (error) {
+          showMessage(els.registerMessage, "Сеть недоступна", true);
+        }
+      }
+
+      async function handleLogin(event) {
+        event.preventDefault();
+        clearMessage(els.loginMessage);
+        const login = event.target.login.value.trim();
+        const password = event.target.password.value;
+        const payload = new URLSearchParams();
+        payload.append("username", login);
+        payload.append("password", password);
+        try {
+          const resp = await fetch(`${API_BASE}/auth/login`, {
+            method: "POST",
+            body: payload,
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            const detail = data.detail || "Неверные учётные данные";
+            showMessage(els.loginMessage, detail, true);
+            return;
+          }
+          setToken(data.access_token);
+          showMessage(els.loginMessage, "Токен получен и сохранён", false);
+          await loadDatasets();
+        } catch (error) {
+          showMessage(els.loginMessage, "Сеть недоступна", true);
+        }
+      }
+
+      async function handleDatasetCreate(event) {
+        event.preventDefault();
+        clearMessage(els.datasetMessage);
+        const formData = new FormData(event.target);
+        const token = getToken();
+        if (!token) {
+          showMessage(els.datasetMessage, "Сначала войдите, чтобы загрузить датасет", true);
+          return;
+        }
+        if (!formData.get("file")) {
+          showMessage(els.datasetMessage, "Выберите CSV файл", true);
+          return;
+        }
+        try {
+          const resp = await fetch(`${API_BASE}/datasets`, {
+            method: "POST",
+            headers: { ...authHeaders() },
+            body: formData,
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            const detail = data.detail || "Не удалось загрузить датасет";
+            showMessage(els.datasetMessage, detail, true);
+            return;
+          }
+          showMessage(els.datasetMessage, `Датасет ${data.name} загружен`, false);
+          event.target.reset();
+          await loadDatasets();
+        } catch (error) {
+          showMessage(els.datasetMessage, "Сеть недоступна", true);
+        }
+      }
+
+      async function loadDatasets() {
+        if (!getToken()) return;
+        els.datasetList.textContent = "Загружаем...";
+        try {
+          const resp = await fetch(`${API_BASE}/datasets`, {
+            headers: { ...authHeaders() },
+          });
+          const data = await resp.json().catch(() => []);
+          if (!resp.ok) {
+            const detail = data.detail || "Не удалось получить датасеты";
+            const alert = document.createElement("div");
+            alert.className = "alert error";
+            alert.textContent = detail;
+            els.datasetList.innerHTML = "";
+            els.datasetList.appendChild(alert);
+            return;
+          }
+          renderDatasets(Array.isArray(data) ? data : []);
+        } catch (error) {
+          const alert = document.createElement("div");
+          alert.className = "alert error";
+          alert.textContent = "Не удалось подключиться к API";
+          els.datasetList.innerHTML = "";
+          els.datasetList.appendChild(alert);
+        }
+      }
+
+      function renderDatasets(items) {
+        const list = els.datasetList;
+        const select = els.datasetSelect;
+        list.innerHTML = "";
+        select.innerHTML = "";
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Выберите датасет";
+        select.appendChild(placeholder);
+
+        if (!items.length) {
+          const empty = document.createElement("div");
+          empty.className = "muted";
+          empty.textContent = "Датасетов пока нет";
+          list.appendChild(empty);
+
+          placeholder.textContent = "Нет доступных датасетов — загрузите новый";
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        items.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          const created = new Date(item.created_at).toLocaleString();
+          const name = document.createElement("div");
+          const strong = document.createElement("strong");
+          strong.textContent = item.name;
+          name.appendChild(strong);
+
+          const meta = document.createElement("div");
+          meta.className = "muted";
+          meta.textContent = `ID: ${item.id} • ${created}`;
+
+          const path = document.createElement("div");
+          path.className = "muted";
+          path.textContent = item.s3_path;
+
+          card.appendChild(name);
+          card.appendChild(meta);
+          card.appendChild(path);
+          fragment.appendChild(card);
+
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = `${item.name} (id: ${item.id})`;
+          select.appendChild(option);
+        });
+
+        list.appendChild(fragment);
+      }
+
+      async function handleRunCreate(event) {
+        event.preventDefault();
+        clearMessage(els.runMessage);
+        const datasetId = els.datasetSelect.value;
+        if (!datasetId) {
+          showMessage(els.runMessage, "Выберите датасет", true);
+          return;
+        }
+
+        const rawConfig = els.runConfig.value.trim();
+        let configuration = {};
+        if (rawConfig) {
+          try {
+            configuration = JSON.parse(rawConfig);
+          } catch (error) {
+            showMessage(els.runMessage, "Configuration должен быть валидным JSON", true);
+            return;
+          }
+        }
+
+        try {
+          const resp = await fetch(`${API_BASE}/runs`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders(),
+            },
+            body: JSON.stringify({ dataset_id: Number(datasetId), configuration }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            const detail = data.detail || "Не удалось создать запуск";
+            showMessage(els.runMessage, detail, true);
+            return;
+          }
+          showMessage(
+            els.runMessage,
+            `Запуск #${data.id} создан со статусом "${data.status}"`,
+            false
+          );
+          els.runForm.reset();
+          await loadDatasets();
+        } catch (error) {
+          showMessage(els.runMessage, "Сеть недоступна", true);
+        }
+      }
+
+      function bootstrap() {
+        updateAuthVisibility();
+        const token = getToken();
+        if (token) {
+          loadDatasets();
+        }
+      }
+
+      els.registerForm.addEventListener("submit", handleRegister);
+      els.loginForm.addEventListener("submit", handleLogin);
+      els.datasetForm.addEventListener("submit", handleDatasetCreate);
+      els.refreshDatasets.addEventListener("click", loadDatasets);
+      els.runForm.addEventListener("submit", handleRunCreate);
+      els.logoutBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        clearToken();
+        showMessage(els.loginMessage, "Токен очищен", false);
+      });
+
+      bootstrap();
+    </script>
+  </body>
+</html>
