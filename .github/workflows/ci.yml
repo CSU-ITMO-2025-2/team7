@@ -36,3 +36,62 @@ jobs:
       run: |
         isort --check-only --diff .
 
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        include:
+          - name: team7-migrations
+            context: .
+            dockerfile: Dockerfile.migrations
+          - name: team7-core-service
+            context: ./core-service
+            dockerfile: ./core-service/Dockerfile
+          - name: team7-artifacts-service
+            context: ./artifacts-service
+            dockerfile: ./artifacts-service/Dockerfile
+          - name: team7-core-service-frontend
+            context: ./core-service-frontend
+            dockerfile: ./core-service-frontend/Dockerfile
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.context }}
+        file: ${{ matrix.dockerfile }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
