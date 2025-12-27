@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install ruff isort
+        pip install ruff
     
     - name: Run ruff check
       run: |
@@ -31,10 +31,6 @@ jobs:
     - name: Run ruff format check
       run: |
         ruff format --check .
-    
-    - name: Run isort check
-      run: |
-        isort --check-only --diff .
 
   build-and-push:
     runs-on: ubuntu-latest
