@@ -21,7 +21,9 @@ async def _validate_csv(file: UploadFile) -> tuple[bytes, list[str]]:
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="file must be utf-8 csv")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="file must be utf-8 csv"
+        )
 
     stream = io.StringIO(text)
     try:
@@ -50,11 +52,13 @@ async def _validate_csv(file: UploadFile) -> tuple[bytes, list[str]]:
                 )
             if len(row) > 50:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail="csv must have at most 50 columns"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="csv must have at most 50 columns",
                 )
             if row_count > 10_000:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail="csv must have at most 10000 rows"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="csv must have at most 10000 rows",
                 )
     except csv.Error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid csv file")
@@ -93,9 +97,6 @@ async def list_datasets(
     session: AsyncSession = Depends(get_session),
 ):
     result = await session.scalars(
-        select(Dataset)
-        .where(Dataset.user_id == user_id)
-        .order_by(Dataset.created_at.desc())
+        select(Dataset).where(Dataset.user_id == user_id).order_by(Dataset.created_at.desc())
     )
     return list(result.all())
-

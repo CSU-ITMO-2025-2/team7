@@ -74,7 +74,9 @@ def _create_http_client() -> httpx.AsyncClient:
 
 
 def _create_access_token(user_id: int) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.core_service.jwt_expires_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.core_service.jwt_expires_minutes
+    )
     to_encode = {"user_id": user_id, "exp": expire}
     return jwt.encode(
         to_encode,
@@ -83,7 +85,9 @@ def _create_access_token(user_id: int) -> str:
     )
 
 
-async def _update_run_status(client: httpx.AsyncClient, run_id: int, status: str, token: str) -> None:
+async def _update_run_status(
+    client: httpx.AsyncClient, run_id: int, status: str, token: str
+) -> None:
     print(f"Updating run {run_id} status to {status}")
     response = await client.post(
         f"/runs/{run_id}/status",
@@ -106,7 +110,13 @@ def _extract_s3_path(s3_path: str) -> tuple[str, str]:
 
 async def _download_dataset(s3_path: str) -> bytes:
     bucket, key = _extract_s3_path(s3_path)
-    print("Downloading dataset from", bucket, key, settings.s3.access_key_id, settings.s3.secret_access_key)
+    print(
+        "Downloading dataset from",
+        bucket,
+        key,
+        settings.s3.access_key_id,
+        settings.s3.secret_access_key,
+    )
     async with _s3_session.create_client(
         "s3",
         endpoint_url=settings.s3.endpoint_url,
@@ -203,9 +213,7 @@ async def _process_message(message: RunMessage, http_client: httpx.AsyncClient) 
     try:
         dataset_bytes = await _download_dataset(message.dataset_s3_path)
         X, y = _load_arrays(dataset_bytes)
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         model = _build_model(message.configuration)
         model.fit(X_train, y_train)
         metrics = _evaluate_model(model, X_train, X_test, y_train, y_test)

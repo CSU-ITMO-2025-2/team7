@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from kafka.errors import KafkaError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -11,7 +11,6 @@ from .clients import get_dataset_from_artifacts_service
 from .database import get_session
 from .kafka_client import get_kafka_producer, send_run_message
 from .models import Run, RunStatus, User
-from .security import create_access_token, get_current_user_id
 from .schemas import (
     RunCreate,
     RunOut,
@@ -20,6 +19,7 @@ from .schemas import (
     UserCreate,
     UserOut,
 )
+from .security import create_access_token, get_current_user_id
 
 router = APIRouter()
 pwd_hasher = PasswordHasher()
@@ -74,7 +74,7 @@ async def create_run(
 ):
     # Fetch dataset from artifacts service
     dataset = await get_dataset_from_artifacts_service(payload.dataset_id, user_id)
-    
+
     run = Run(
         user_id=user_id,
         dataset_id=payload.dataset_id,
@@ -84,17 +84,17 @@ async def create_run(
     session.add(run)
     await session.commit()
     await session.refresh(run)
-    
+
     # Send message to Kafka
     producer = get_kafka_producer()
-    
+
     message = {
         "user_id": user_id,
         "dataset_s3_path": dataset["s3_path"],
         "run_id": run.id,
         "configuration": payload.configuration,
     }
-    
+
     try:
         send_run_message(producer, message)
     except KafkaError as exc:
@@ -105,7 +105,7 @@ async def create_run(
         )
     finally:
         producer.close()
-    
+
     return run
 
 
@@ -146,10 +146,8 @@ async def update_run_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
     if run.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="access denied")
-    
+
     run.status = payload.status
     await session.commit()
     await session.refresh(run)
     return run
-
-

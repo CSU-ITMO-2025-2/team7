@@ -1,9 +1,8 @@
 import asyncio
 
 import aiobotocore.session
-from botocore.exceptions import ClientError
-
 from app.config import settings
+from botocore.exceptions import ClientError
 
 
 async def create_bucket() -> None:

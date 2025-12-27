@@ -14,7 +14,7 @@ async def get_dataset_from_artifacts_service(dataset_id: int, user_id: int) -> d
             )
             response.raise_for_status()
             datasets = response.json()
-            
+
             # Find the dataset with the matching ID
             dataset = next((ds for ds in datasets if ds["id"] == dataset_id), None)
             if dataset is None:
@@ -23,7 +23,7 @@ async def get_dataset_from_artifacts_service(dataset_id: int, user_id: int) -> d
                     detail=f"dataset {dataset_id} not found",
                 )
             return dataset
-            
+
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 raise HTTPException(
@@ -39,4 +39,3 @@ async def get_dataset_from_artifacts_service(dataset_id: int, user_id: int) -> d
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"failed to connect to artifacts service: {exc}",
             )
-

@@ -1,9 +1,9 @@
-import sys
 import importlib.util
-from pathlib import Path
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
-from sqlalchemy import pool
+from sqlalchemy import MetaData, pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -15,31 +15,33 @@ here = Path(__file__).parent.parent
 core_service_path = here / "core-service"
 artifacts_service_path = here / "artifacts-service"
 
+
 def load_module_from_file(file_path: Path, parent_path: Path):
     """Загружает модуль из файла с правильной настройкой для относительных импортов"""
     module_name = f"app.{file_path.stem}"
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load module {module_name} from {file_path}")
-    
+
     parent_str = str(parent_path)
     was_in_path = parent_str in sys.path
     if not was_in_path:
         sys.path.insert(0, parent_str)
-    
+
     try:
         module = importlib.util.module_from_spec(spec)
         module.__package__ = "app"
         module.__name__ = module_name
-        
+
         # Регистрируем модуль в sys.modules
         sys.modules[module_name] = module
-        
+
         spec.loader.exec_module(module)
         return module
     finally:
         if not was_in_path and parent_str in sys.path:
             sys.path.remove(parent_str)
+
 
 # Загружаем модули core-service в правильном порядке
 core_app_path = core_service_path / "app"
@@ -58,12 +60,12 @@ try:
         app_module.__name__ = "app"
         app_module.__path__ = [str(core_app_path)]
         sys.modules["app"] = app_module
-    
+
     # Загружаем в правильном порядке: config -> database -> models
     core_config = load_module_from_file(core_app_path / "config.py", core_service_path)
     core_database = load_module_from_file(core_app_path / "database.py", core_service_path)
     core_models = load_module_from_file(core_app_path / "models.py", core_service_path)
-    
+
     # Сохраняем ссылки на модули core-service перед загрузкой artifacts-service
     core_config_ref = core_config
     core_database_ref = core_database
@@ -86,18 +88,24 @@ try:
     app_module.__name__ = "app"
     app_module.__path__ = [str(artifacts_app_path)]
     sys.modules["app"] = app_module
-    
+
     # Загружаем в правильном порядке: config -> database -> models
-    
+
     # Очищаем sys.modules от предыдущих модулей app.* перед загрузкой artifacts-service
     keys_to_remove = [k for k in sys.modules.keys() if k.startswith("app.")]
     for k in keys_to_remove:
         del sys.modules[k]
-    
-    artifacts_config = load_module_from_file(artifacts_app_path / "config.py", artifacts_service_path)
-    artifacts_database = load_module_from_file(artifacts_app_path / "database.py", artifacts_service_path)
-    artifacts_models = load_module_from_file(artifacts_app_path / "models.py", artifacts_service_path)
-    
+
+    artifacts_config = load_module_from_file(
+        artifacts_app_path / "config.py", artifacts_service_path
+    )
+    artifacts_database = load_module_from_file(
+        artifacts_app_path / "database.py", artifacts_service_path
+    )
+    artifacts_models = load_module_from_file(
+        artifacts_app_path / "models.py", artifacts_service_path
+    )
+
     # Сохраняем ссылку на artifacts_database
     artifacts_database_ref = artifacts_database
 finally:
@@ -110,8 +118,6 @@ ArtifactsBase = artifacts_database_ref.Base
 settings = core_config_ref.settings
 
 # Объединяем метаданные из обоих Base
-from sqlalchemy import MetaData
-
 # Создаем новое MetaData и добавляем таблицы из обоих Base
 target_metadata = MetaData()
 
@@ -130,7 +136,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-sync_url = settings.postgres.async_url.replace("+psycopg_async", "").replace("postgresql+asyncpg", "postgresql+psycopg")
+sync_url = settings.postgres.async_url.replace("+psycopg_async", "").replace(
+    "postgresql+asyncpg", "postgresql+psycopg"
+)
 config.set_main_option("sqlalchemy.url", sync_url)
 
 

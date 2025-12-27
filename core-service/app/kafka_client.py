@@ -17,11 +17,11 @@ def get_kafka_producer() -> KafkaProducer:
 
 def send_run_message(producer: KafkaProducer, message: dict[str, Any]) -> None:
     """Send a message to the Kafka runs topic.
-    
+
     Args:
         producer: KafkaProducer instance
         message: Dictionary containing run information
-        
+
     Raises:
         KafkaError: If message fails to send
     """
@@ -31,4 +31,3 @@ def send_run_message(producer: KafkaProducer, message: dict[str, Any]) -> None:
         future.get(timeout=10)
     except KafkaError as exc:
         raise exc
-

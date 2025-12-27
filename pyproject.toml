@@ -26,7 +26,8 @@ select = [
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
-    "W293"
+    "W293",
+    "W291"
 ]
 
 [tool.ruff.format]
