@@ -55,6 +55,9 @@ jobs:
           - name: team7-core-service-frontend
             context: ./core-service-frontend
             dockerfile: ./core-service-frontend/Dockerfile
+          - name: team7-train-service
+            context: ./train-service
+            dockerfile: ./train-service/Dockerfile
     
     steps:
     - name: Checkout code
