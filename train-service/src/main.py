@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
         await consumer_task
 
 
-app = FastAPI(title="Train Service", lifespan=lifespan)
+app = FastAPI(title="Train Service", lifespan=lifespan, root_path="/train")
 
 app.add_middleware(
     CORSMiddleware,

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import router
 
-app = FastAPI(title="Artifacts Service")
+app = FastAPI(title="Artifacts Service", root_path="/artifacts")
 
 app.add_middleware(
     CORSMiddleware,

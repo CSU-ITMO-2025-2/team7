@@ -12,6 +12,11 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Build arguments (передаются при docker build)
+ARG VITE_API_BASE=/api
+ARG VITE_ARTIFACTS_BASE=/artifacts
+ARG VITE_TRAIN_BASE=/train
+
 # Build the app
 RUN npm run build
 

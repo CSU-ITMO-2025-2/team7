@@ -200,6 +200,10 @@ services:
     build:
       context: ./core-service-frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: http://localhost:8000/api
+        VITE_ARTIFACTS_BASE: http://localhost:8001/artifacts
+        VITE_TRAIN_BASE: http://localhost:8005/train
     ports:
       - "80:80"
     depends_on:

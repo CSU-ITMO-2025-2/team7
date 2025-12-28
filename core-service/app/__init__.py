@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import router
 
-app = FastAPI(title="Distributed Core Service")
+app = FastAPI(title="Distributed Core Service", root_path="/api")
 
 app.add_middleware(
     CORSMiddleware,

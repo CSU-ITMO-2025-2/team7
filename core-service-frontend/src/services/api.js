@@ -1,6 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
-const ARTIFACTS_BASE = import.meta.env.VITE_ARTIFACTS_BASE || 'http://localhost:8001';
-const TRAIN_BASE = import.meta.env.VITE_TRAIN_BASE || 'http://localhost:8005';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const ARTIFACTS_BASE = import.meta.env.VITE_ARTIFACTS_BASE || '/artifacts';
+const TRAIN_BASE = import.meta.env.VITE_TRAIN_BASE || '/train';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('coreServiceToken');
