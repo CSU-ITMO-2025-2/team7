@@ -17,6 +17,8 @@ def get_kafka_producer() -> KafkaProducer:
     if settings.kafka.username and settings.kafka.password:
         config["sasl_plain_username"] = settings.kafka.username
         config["sasl_plain_password"] = settings.kafka.password
+    if settings.kafka.security_protocol.upper() == "SASL_PLAINTEXT":
+        config["sasl_mechanism"] = settings.kafka.sasl_mechanism.upper()
     return KafkaProducer(**config)
 
 
