@@ -17,6 +17,7 @@ class KafkaSettings(BaseSettings):
     group_id: str = "train-service"
     auto_offset_reset: str = "earliest"
     security_protocol: str = "PLAINTEXT"
+    sasl_mechanism: str = "PLAIN"
     username: str | None = None
     password: str | None = None
 

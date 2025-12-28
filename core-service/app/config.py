@@ -31,6 +31,7 @@ class KafkaSettings(BaseSettings):
     bootstrap_servers: str = "kafka:9092"
     topic: str = "runs"
     security_protocol: str = "PLAINTEXT"
+    sasl_mechanism: str = "PLAIN"
     username: str | None = None
     password: str | None = None
 

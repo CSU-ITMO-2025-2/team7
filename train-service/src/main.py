@@ -104,6 +104,8 @@ def _create_consumer() -> Consumer:
     if settings.kafka.username and settings.kafka.password:
         config["sasl.username"] = settings.kafka.username
         config["sasl.password"] = settings.kafka.password
+    if settings.kafka.security_protocol.upper() == "SASL_PLAINTEXT":
+        config["sasl.mechanism"] = settings.kafka.sasl_mechanism.upper()
     consumer = Consumer(config)
     consumer.subscribe([settings.kafka.topic_name])
     return consumer
