@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { runsService, datasetsService, authService } from '../../services/api';
-import { Input } from '../../components/Input/Input';
+import { runsService, datasetsService, trainService } from '../../services/api';
 import { Button } from '../../components/Button/Button';
 import { Alert } from '../../components/Alert/Alert';
 import { Card } from '../../components/Card/Card';
@@ -17,23 +16,29 @@ export const Home = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [datasetId, setDatasetId] = useState('');
-  const [configuration, setConfiguration] = useState('{}');
-  const [userId, setUserId] = useState(null);
+  const [modelOptions, setModelOptions] = useState([]);
+  const [selectedModel, setSelectedModel] = useState('');
+  const [paramValues, setParamValues] = useState({});
+  const [isLoadingModels, setIsLoadingModels] = useState(true);
 
   useEffect(() => {
-    loadUserAndData();
+    loadData();
   }, []);
 
-  const loadUserAndData = async () => {
-    try {
-      const user = await authService.getCurrentUser();
-      setUserId(user.id);
-      await Promise.all([loadRuns(), loadDatasets(user.id)]);
-    } catch (err) {
-      setError('Не удалось загрузить данные: ' + err.message);
-      setIsLoadingRuns(false);
-      setIsLoadingDatasets(false);
+  const buildDefaultValues = (model) => {
+    if (!model) {
+      return {};
     }
+    return model.parameters.reduce((acc, param) => {
+      const value = param.default === null || param.default === undefined ? '' : String(param.default);
+      return { ...acc, [param.name]: value };
+    }, {});
+  };
+
+  const buildHyperparameters = () => ({ ...paramValues });
+
+  const loadData = async () => {
+    await Promise.all([loadRuns(), loadDatasets(), loadModelOptions()]);
   };
 
   const loadRuns = async () => {
@@ -48,16 +53,50 @@ export const Home = () => {
     }
   };
 
-  const loadDatasets = async (uid) => {
+  const loadDatasets = async () => {
     setIsLoadingDatasets(true);
     try {
-      const data = await datasetsService.getDatasets(uid);
+      const data = await datasetsService.getDatasets();
       setDatasets(data);
     } catch (err) {
       setError('Не удалось загрузить список датасетов: ' + err.message);
     } finally {
       setIsLoadingDatasets(false);
     }
+  };
+
+  const loadModelOptions = async () => {
+    setIsLoadingModels(true);
+    try {
+      const data = await trainService.getModels();
+      const models = data.models || [];
+      setModelOptions(models);
+      if (models.length > 0) {
+        const nextModel = models.find((model) => model.name === selectedModel)?.name
+          || models[0].name;
+        setSelectedModel(nextModel);
+        const modelSpec = models.find((model) => model.name === nextModel);
+        setParamValues(buildDefaultValues(modelSpec));
+      } else {
+        setSelectedModel('');
+        setParamValues({});
+      }
+    } catch (err) {
+      setError('Не удалось загрузить список моделей: ' + err.message);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  const handleModelChange = (event) => {
+    const nextModel = event.target.value;
+    setSelectedModel(nextModel);
+    const modelSpec = modelOptions.find((model) => model.name === nextModel);
+    setParamValues(buildDefaultValues(modelSpec));
+  };
+
+  const handleParamChange = (name, value) => {
+    setParamValues((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -70,22 +109,27 @@ export const Home = () => {
       return;
     }
 
-    let config = {};
-    if (configuration.trim()) {
-      try {
-        config = JSON.parse(configuration);
-      } catch (err) {
-        setError('Configuration должен быть валидным JSON');
-        return;
-      }
+    if (!selectedModel) {
+      setError('Выберите модель');
+      return;
     }
+
+    const modelSpec = modelOptions.find((model) => model.name === selectedModel);
+    if (!modelSpec) {
+      setError('Выберите модель');
+      return;
+    }
+
+    const config = {
+      model: selectedModel,
+      hyperparameters: buildHyperparameters(),
+    };
 
     setIsLoading(true);
     try {
       const run = await runsService.createRun(Number(datasetId), config);
       setSuccess(`Запуск #${run.id} создан со статусом "${run.status}"`);
       setDatasetId('');
-      setConfiguration('{}');
       await loadRuns();
     } catch (err) {
       setError(err.message);
@@ -112,6 +156,8 @@ export const Home = () => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('ru-RU');
   };
+
+  const selectedModelSpec = modelOptions.find((model) => model.name === selectedModel);
 
   return (
     <div className="home">
@@ -155,17 +201,66 @@ export const Home = () => {
                   ))}
                 </select>
               </div>
-              <div className="input-group">
-                <label className="input-label">Configuration (JSON)</label>
-                <textarea
-                  className="input"
-                  value={configuration}
-                  onChange={(e) => setConfiguration(e.target.value)}
-                  placeholder='{"param": "value"}'
-                />
-              </div>
+              {isLoadingModels ? (
+                <div className="loading">Загрузка моделей...</div>
+              ) : modelOptions.length === 0 ? (
+                <div className="empty-state">Нет доступных моделей</div>
+              ) : (
+                <>
+                  <div className="input-group">
+                    <label className="input-label">Модель</label>
+                    <select
+                      className="input select-input"
+                      value={selectedModel}
+                      onChange={handleModelChange}
+                      required
+                    >
+                      {modelOptions.map((model) => (
+                        <option key={model.name} value={model.name}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedModelSpec && (
+                    <div className="model-params">
+                      {selectedModelSpec.parameters.map((param) => (
+                        <div className="input-group" key={param.name}>
+                          <label className="input-label">{param.name}</label>
+                          {param.type === 'enum' || param.type === 'bool' ? (
+                            <select
+                              className="input select-input"
+                              value={paramValues[param.name] ?? ''}
+                              onChange={(e) => handleParamChange(param.name, e.target.value)}
+                            >
+                              {(param.options || []).map((option) => (
+                                <option
+                                  key={`${param.name}-${String(option)}`}
+                                  value={String(option)}
+                                >
+                                  {String(option)}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              className="input"
+                              type="number"
+                              value={paramValues[param.name] ?? ''}
+                              onChange={(e) => handleParamChange(param.name, e.target.value)}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
               <div className="form-actions">
-                <Button type="submit" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  disabled={isLoading || isLoadingModels || modelOptions.length === 0}
+                >
                   {isLoading ? 'Создание...' : 'Создать запуск'}
                 </Button>
                 <Button type="button" variant="secondary" onClick={loadRuns} disabled={isLoadingRuns}>
@@ -226,4 +321,3 @@ export const Home = () => {
     </div>
   );
 };
-

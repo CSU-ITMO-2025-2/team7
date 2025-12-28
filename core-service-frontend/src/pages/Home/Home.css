@@ -112,3 +112,12 @@
   font-size: 1rem;
 }
 
+.model-params {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.model-params .input-group {
+  margin-bottom: 0;
+}

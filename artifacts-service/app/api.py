@@ -10,6 +10,7 @@ from .config import settings
 from .database import get_session
 from .models import Dataset
 from .schemas import DatasetOut
+from .security import get_current_user_id
 
 router = APIRouter()
 
@@ -69,7 +70,7 @@ async def _validate_csv(file: UploadFile) -> tuple[bytes, list[str]]:
 async def create_dataset(
     dataset_name: str = Form(...),
     file: UploadFile = File(...),
-    user_id: int = Form(...),
+    user_id: int = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
     s3_client=Depends(get_s3_client),
 ):
@@ -93,7 +94,7 @@ async def create_dataset(
 
 @router.get("/datasets", response_model=list[DatasetOut])
 async def list_datasets(
-    user_id: int,
+    user_id: int = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     result = await session.scalars(
