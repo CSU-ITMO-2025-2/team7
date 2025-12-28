@@ -30,6 +30,9 @@ class AuthSettings(BaseSettings):
 class KafkaSettings(BaseSettings):
     bootstrap_servers: str = "kafka:9092"
     topic: str = "runs"
+    security_protocol: str = "PLAINTEXT"
+    username: str | None = None
+    password: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="KAFKA_", extra="ignore")
 

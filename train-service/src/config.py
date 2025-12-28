@@ -16,6 +16,9 @@ class KafkaSettings(BaseSettings):
     topic_name: str = "runs"
     group_id: str = "train-service"
     auto_offset_reset: str = "earliest"
+    security_protocol: str = "PLAINTEXT"
+    username: str | None = None
+    password: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="KAFKA_", extra="ignore", env_file=".env")
 
