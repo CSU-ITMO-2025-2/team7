@@ -279,9 +279,7 @@ def _build_model(configuration: dict[str, Any]) -> Any:
     for param_name, value in hyperparameters.items():
         if param_name not in param_specs:
             continue
-        safe_params[param_name] = _coerce_param_value(
-            param_name, param_specs[param_name], value
-        )
+        safe_params[param_name] = _coerce_param_value(param_name, param_specs[param_name], value)
     return spec["class"](**safe_params)
 
 
