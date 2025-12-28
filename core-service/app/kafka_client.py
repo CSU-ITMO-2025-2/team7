@@ -9,10 +9,15 @@ from .config import settings
 
 def get_kafka_producer() -> KafkaProducer:
     """Create and return a Kafka producer instance."""
-    return KafkaProducer(
-        bootstrap_servers=settings.kafka.bootstrap_servers,
-        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-    )
+    config: dict[str, Any] = {
+        "bootstrap_servers": settings.kafka.bootstrap_servers,
+        "value_serializer": lambda v: json.dumps(v).encode("utf-8"),
+        "security_protocol": settings.kafka.security_protocol.upper(),
+    }
+    if settings.kafka.username and settings.kafka.password:
+        config["sasl_plain_username"] = settings.kafka.username
+        config["sasl_plain_password"] = settings.kafka.password
+    return KafkaProducer(**config)
 
 
 def send_run_message(producer: KafkaProducer, message: dict[str, Any]) -> None:

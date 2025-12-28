@@ -94,14 +94,17 @@ def _parse_message(raw: bytes) -> RunMessage:
 
 
 def _create_consumer() -> Consumer:
-    consumer = Consumer(
-        {
-            "bootstrap.servers": settings.kafka.bootstrap_servers,
-            "group.id": settings.kafka.group_id,
-            "enable.auto.commit": False,
-            "auto.offset.reset": settings.kafka.auto_offset_reset,
-        }
-    )
+    config: dict[str, Any] = {
+        "bootstrap.servers": settings.kafka.bootstrap_servers,
+        "group.id": settings.kafka.group_id,
+        "enable.auto.commit": False,
+        "auto.offset.reset": settings.kafka.auto_offset_reset,
+        "security.protocol": settings.kafka.security_protocol.upper(),
+    }
+    if settings.kafka.username and settings.kafka.password:
+        config["sasl.username"] = settings.kafka.username
+        config["sasl.password"] = settings.kafka.password
+    consumer = Consumer(config)
     consumer.subscribe([settings.kafka.topic_name])
     return consumer
 
