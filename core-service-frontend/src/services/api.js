@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 const ARTIFACTS_BASE = import.meta.env.VITE_ARTIFACTS_BASE || 'http://localhost:8001';
+const TRAIN_BASE = import.meta.env.VITE_TRAIN_BASE || 'http://localhost:8005';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('coreServiceToken');
@@ -157,6 +158,21 @@ export const runsService = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.detail || 'Не удалось получить запуск');
+    }
+
+    return response.json();
+  },
+};
+
+export const trainService = {
+  async getModels() {
+    const response = await fetch(`${TRAIN_BASE}/models`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'Не удалось получить список моделей');
     }
 
     return response.json();

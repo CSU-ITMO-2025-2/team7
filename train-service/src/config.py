@@ -29,10 +29,18 @@ class CoreServiceSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CORE_", extra="ignore", env_file=".env")
 
 
+class ApiSettings(BaseSettings):
+    host: str = "0.0.0.0"
+    port: int = 8005
+
+    model_config = SettingsConfigDict(env_prefix="TRAIN_", extra="ignore", env_file=".env")
+
+
 class Settings(BaseSettings):
     s3: S3Settings = Field(default_factory=S3Settings)
     kafka: KafkaSettings = Field(default_factory=KafkaSettings)
     core_service: CoreServiceSettings = Field(default_factory=CoreServiceSettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
