@@ -25,6 +25,11 @@ router = APIRouter()
 pwd_hasher = PasswordHasher()
 
 
+@router.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 @router.post("/auth/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_session)):
     hashed_password = pwd_hasher.hash(payload.password)

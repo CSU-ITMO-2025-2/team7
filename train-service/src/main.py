@@ -51,6 +51,11 @@ app.add_middleware(
 )
 
 
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/models")
 async def list_models() -> dict[str, Any]:
     return get_model_catalog()

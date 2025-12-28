@@ -15,6 +15,11 @@ from .security import get_current_user_id
 router = APIRouter()
 
 
+@router.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 async def _validate_csv(file: UploadFile) -> tuple[bytes, list[str]]:
     raw = await file.read()
     if not raw:

@@ -10,7 +10,7 @@
     <header>
       <div>
         <h1>Мои запуски</h1>
-        <div class="muted">API: http://localhost:8000</div>
+        <div class="muted" id="apiInfo">API: загрузка...</div>
       </div>
       <nav>
         <a href="index.html">Главная</a>
@@ -37,7 +37,7 @@
     </main>
 
     <script>
-      const API_BASE = "http://localhost:8000";
+      const API_BASE = "";
       const TOKEN_KEY = "coreServiceToken";
 
       const els = {
@@ -46,7 +46,12 @@
         refreshRuns: document.getElementById("refreshRuns"),
         runsList: document.getElementById("runsList"),
         runsMessage: document.getElementById("runsMessage"),
+        apiInfo: document.getElementById("apiInfo"),
       };
+      
+      if (els.apiInfo) {
+        els.apiInfo.textContent = `API: ${API_BASE}`;
+      }
 
       function getToken() {
         return localStorage.getItem(TOKEN_KEY);
