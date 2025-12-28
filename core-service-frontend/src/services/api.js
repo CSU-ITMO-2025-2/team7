@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const ARTIFACTS_BASE = import.meta.env.VITE_ARTIFACTS_BASE || 'http://localhost:8001';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('coreServiceToken');
@@ -69,14 +70,19 @@ export const authService = {
 };
 
 export const datasetsService = {
-  async uploadDataset(name, file, userId) {
+  async uploadDataset(name, file) {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) {
+      throw new Error('Требуется авторизация');
+    }
+
     const formData = new FormData();
     formData.append('dataset_name', name);
     formData.append('file', file);
-    formData.append('user_id', userId);
 
-    const response = await fetch('http://localhost:8001/datasets', {
+    const response = await fetch(`${ARTIFACTS_BASE}/datasets`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 
@@ -88,9 +94,15 @@ export const datasetsService = {
     return response.json();
   },
 
-  async getDatasets(userId) {
-    const response = await fetch(`http://localhost:8001/datasets?user_id=${userId}`, {
+  async getDatasets() {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) {
+      throw new Error('Требуется авторизация');
+    }
+
+    const response = await fetch(`${ARTIFACTS_BASE}/datasets`, {
       method: 'GET',
+      headers,
     });
 
     if (!response.ok) {
@@ -150,4 +162,3 @@ export const runsService = {
     return response.json();
   },
 };
-

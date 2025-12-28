@@ -19,7 +19,7 @@ from .schemas import (
     UserCreate,
     UserOut,
 )
-from .security import create_access_token, get_current_user_id
+from .security import create_access_token, get_current_user_id, oauth2_scheme
 
 router = APIRouter()
 pwd_hasher = PasswordHasher()
@@ -71,9 +71,10 @@ async def create_run(
     payload: RunCreate,
     session: AsyncSession = Depends(get_session),
     user_id: int = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme),
 ):
     # Fetch dataset from artifacts service
-    dataset = await get_dataset_from_artifacts_service(payload.dataset_id, user_id)
+    dataset = await get_dataset_from_artifacts_service(payload.dataset_id, token, user_id)
 
     run = Run(
         user_id=user_id,

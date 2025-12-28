@@ -4,12 +4,12 @@ from fastapi import HTTPException, status
 from .config import settings
 
 
-async def get_dataset_from_artifacts_service(dataset_id: int, user_id: int) -> dict:
+async def get_dataset_from_artifacts_service(dataset_id: int, token: str, user_id: int) -> dict:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
                 f"{settings.artifacts_service.url}/datasets",
-                params={"user_id": user_id},
+                headers={"Authorization": f"Bearer {token}"},
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -21,6 +21,10 @@ async def get_dataset_from_artifacts_service(dataset_id: int, user_id: int) -> d
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"dataset {dataset_id} not found",
+                )
+            if dataset.get("user_id") != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="access denied to dataset"
                 )
             return dataset
 

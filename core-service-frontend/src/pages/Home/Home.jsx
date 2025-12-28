@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { runsService, datasetsService, authService } from '../../services/api';
+import { runsService, datasetsService } from '../../services/api';
 import { Input } from '../../components/Input/Input';
 import { Button } from '../../components/Button/Button';
 import { Alert } from '../../components/Alert/Alert';
@@ -18,22 +18,13 @@ export const Home = () => {
   const [success, setSuccess] = useState('');
   const [datasetId, setDatasetId] = useState('');
   const [configuration, setConfiguration] = useState('{}');
-  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    loadUserAndData();
+    loadData();
   }, []);
 
-  const loadUserAndData = async () => {
-    try {
-      const user = await authService.getCurrentUser();
-      setUserId(user.id);
-      await Promise.all([loadRuns(), loadDatasets(user.id)]);
-    } catch (err) {
-      setError('Не удалось загрузить данные: ' + err.message);
-      setIsLoadingRuns(false);
-      setIsLoadingDatasets(false);
-    }
+  const loadData = async () => {
+    await Promise.all([loadRuns(), loadDatasets()]);
   };
 
   const loadRuns = async () => {
@@ -48,10 +39,10 @@ export const Home = () => {
     }
   };
 
-  const loadDatasets = async (uid) => {
+  const loadDatasets = async () => {
     setIsLoadingDatasets(true);
     try {
-      const data = await datasetsService.getDatasets(uid);
+      const data = await datasetsService.getDatasets();
       setDatasets(data);
     } catch (err) {
       setError('Не удалось загрузить список датасетов: ' + err.message);
@@ -226,4 +217,3 @@ export const Home = () => {
     </div>
   );
 };
-

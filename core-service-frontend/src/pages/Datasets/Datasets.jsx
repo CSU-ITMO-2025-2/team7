@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { datasetsService, authService } from '../../services/api';
+import { datasetsService } from '../../services/api';
 import { Input } from '../../components/Input/Input';
 import { Button } from '../../components/Button/Button';
 import { Alert } from '../../components/Alert/Alert';
@@ -14,27 +14,15 @@ export const Datasets = () => {
   const [success, setSuccess] = useState('');
   const [datasetName, setDatasetName] = useState('');
   const [file, setFile] = useState(null);
-  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    loadUserAndDatasets();
+    loadDatasets();
   }, []);
 
-  const loadUserAndDatasets = async () => {
-    try {
-      const user = await authService.getCurrentUser();
-      setUserId(user.id);
-      await loadDatasets(user.id);
-    } catch (err) {
-      setError('Не удалось загрузить информацию о пользователе: ' + err.message);
-      setIsLoadingDatasets(false);
-    }
-  };
-
-  const loadDatasets = async (uid) => {
+  const loadDatasets = async () => {
     setIsLoadingDatasets(true);
     try {
-      const data = await datasetsService.getDatasets(uid);
+      const data = await datasetsService.getDatasets();
       setDatasets(data);
     } catch (err) {
       setError('Не удалось загрузить список датасетов: ' + err.message);
@@ -71,21 +59,16 @@ export const Datasets = () => {
       return;
     }
 
-    if (!userId) {
-      setError('Не удалось определить пользователя');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const dataset = await datasetsService.uploadDataset(datasetName, file, userId);
+      const dataset = await datasetsService.uploadDataset(datasetName, file);
       setSuccess(`Датасет "${dataset.name}" успешно загружен`);
       setDatasetName('');
       setFile(null);
       // Reset file input
       const fileInput = document.getElementById('file-input');
       if (fileInput) fileInput.value = '';
-      await loadDatasets(userId);
+      await loadDatasets();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -140,8 +123,8 @@ export const Datasets = () => {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => userId && loadDatasets(userId)}
-                disabled={isLoadingDatasets || !userId}
+                onClick={loadDatasets}
+                disabled={isLoadingDatasets}
               >
                 Обновить список
               </Button>
@@ -186,4 +169,3 @@ export const Datasets = () => {
     </div>
   );
 };
-
