@@ -33,6 +33,12 @@ class CoreServiceSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CORE_", extra="ignore", env_file=".env")
 
 
+class ArtifactsServiceSettings(BaseSettings):
+    base_url: str = "http://localhost:8001"
+
+    model_config = SettingsConfigDict(env_prefix="ARTIFACTS_", extra="ignore", env_file=".env")
+
+
 class ApiSettings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8005
@@ -44,6 +50,7 @@ class Settings(BaseSettings):
     s3: S3Settings = Field(default_factory=S3Settings)
     kafka: KafkaSettings = Field(default_factory=KafkaSettings)
     core_service: CoreServiceSettings = Field(default_factory=CoreServiceSettings)
+    artifacts_service: ArtifactsServiceSettings = Field(default_factory=ArtifactsServiceSettings)
     api: ApiSettings = Field(default_factory=ApiSettings)
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")

@@ -178,3 +178,43 @@ export const trainService = {
     return response.json();
   },
 };
+
+const buildDownloadError = async (response, fallbackMessage) => {
+  const error = new Error(fallbackMessage);
+  error.status = response.status;
+  try {
+    const payload = await response.json();
+    error.message = payload.detail || fallbackMessage;
+  } catch {
+    error.message = fallbackMessage;
+  }
+  return error;
+};
+
+export const artifactsService = {
+  async downloadModel(runId) {
+    const response = await fetch(`${ARTIFACTS_BASE}/runs/${runId}/model`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw await buildDownloadError(response, 'Не удалось скачать модель');
+    }
+
+    const blob = await response.blob();
+    return { blob, filename: `run-${runId}-model.pkl` };
+  },
+
+  async downloadResults(runId) {
+    const response = await fetch(`${ARTIFACTS_BASE}/runs/${runId}/results`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw await buildDownloadError(response, 'Не удалось скачать результаты');
+    }
+
+    const blob = await response.blob();
+    return { blob, filename: `run-${runId}-results.pdf` };
+  },
+};

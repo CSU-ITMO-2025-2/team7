@@ -36,10 +36,17 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="JWT_", extra="ignore")
 
 
+class CoreServiceSettings(BaseSettings):
+    base_url: str = "http://localhost:8000"
+
+    model_config = SettingsConfigDict(env_prefix="CORE_", extra="ignore")
+
+
 class Settings(BaseSettings):
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
     s3: S3Settings = Field(default_factory=S3Settings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    core_service: CoreServiceSettings = Field(default_factory=CoreServiceSettings)
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
