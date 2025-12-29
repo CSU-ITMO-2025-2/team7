@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { runsService, datasetsService, trainService } from '../../services/api';
+import { runsService, datasetsService, trainService, artifactsService } from '../../services/api';
 import { Button } from '../../components/Button/Button';
 import { Alert } from '../../components/Alert/Alert';
 import { Card } from '../../components/Card/Card';
@@ -155,6 +155,47 @@ export const Home = () => {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('ru-RU');
+  };
+
+  const downloadFile = (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadModel = async (runId) => {
+    setError('');
+    setSuccess('');
+    try {
+      const { blob, filename } = await artifactsService.downloadModel(runId);
+      downloadFile(blob, filename);
+    } catch (err) {
+      if (err?.status === 404) {
+        setError(`Модель для запуска #${runId} пока не доступна`);
+      } else {
+        setError(err?.message || 'Не удалось скачать модель');
+      }
+    }
+  };
+
+  const handleDownloadResults = async (runId) => {
+    setError('');
+    setSuccess('');
+    try {
+      const { blob, filename } = await artifactsService.downloadResults(runId);
+      downloadFile(blob, filename);
+    } catch (err) {
+      if (err?.status === 404) {
+        setError(`Результаты для запуска #${runId} пока не доступны`);
+      } else {
+        setError(err?.message || 'Не удалось скачать результаты');
+      }
+    }
   };
 
   const selectedModelSpec = modelOptions.find((model) => model.name === selectedModel);
@@ -313,6 +354,16 @@ export const Home = () => {
                     </div>
                   )}
                 </div>
+                {run.status === 'completed' && (
+                  <div className="run-actions">
+                    <Button onClick={() => handleDownloadModel(run.id)}>
+                      Скачать модель
+                    </Button>
+                    <Button variant="secondary" onClick={() => handleDownloadResults(run.id)}>
+                      Скачать результаты
+                    </Button>
+                  </div>
+                )}
               </Card>
             ))}
           </div>

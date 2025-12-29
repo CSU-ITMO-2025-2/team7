@@ -111,9 +111,16 @@ def _create_consumer() -> Consumer:
     return consumer
 
 
-def _create_http_client() -> httpx.AsyncClient:
+def _create_core_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
         base_url=settings.core_service.base_url,
+        # timeout=httpx.Timeout(10, read=30),
+    )
+
+
+def _create_artifacts_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        base_url=settings.artifacts_service.base_url,
         # timeout=httpx.Timeout(10, read=30),
     )
 
@@ -153,6 +160,14 @@ def _extract_s3_path(s3_path: str) -> tuple[str, str]:
     return bucket, key
 
 
+def _extract_dataset_name(s3_path: str) -> str:
+    _, key = _extract_s3_path(s3_path)
+    filename = key.rsplit("/", 1)[-1]
+    if filename.lower().endswith(".csv"):
+        return filename[:-4]
+    return filename
+
+
 async def _download_dataset(s3_path: str) -> bytes:
     bucket, key = _extract_s3_path(s3_path)
     print(
@@ -173,7 +188,7 @@ async def _download_dataset(s3_path: str) -> bytes:
     return body
 
 
-def _load_arrays(raw: bytes) -> tuple[np.ndarray, np.ndarray]:
+def _load_arrays(raw: bytes) -> tuple[np.ndarray, np.ndarray, list[str], str]:
     stream = io.StringIO(raw.decode("utf-8"))
     reader = csv.DictReader(stream)
     if not reader.fieldnames:
@@ -200,7 +215,66 @@ def _load_arrays(raw: bytes) -> tuple[np.ndarray, np.ndarray]:
     if not X_rows:
         raise ValueError("csv file does not contain any rows")
 
-    return np.array(X_rows, dtype=float), np.array(y_rows, dtype=float)
+    return (
+        np.array(X_rows, dtype=float),
+        np.array(y_rows, dtype=float),
+        feature_columns,
+        target_column,
+    )
+
+
+def _summarize_column(name: str, values: np.ndarray) -> dict[str, Any]:
+    return {
+        "name": name,
+        "min": float(np.min(values)),
+        "max": float(np.max(values)),
+        "mean": float(np.mean(values)),
+        "std": float(np.std(values)),
+    }
+
+
+def _build_distributions(
+    X: np.ndarray,
+    y: np.ndarray,
+    feature_names: list[str],
+    target_name: str,
+    max_charts: int = 3,
+) -> list[dict[str, Any]]:
+    series: list[tuple[str, np.ndarray]] = [(target_name, y)]
+    for index, name in enumerate(feature_names[: max(0, max_charts - 1)]):
+        series.append((name, X[:, index]))
+
+    distributions = []
+    for name, values in series:
+        counts, bins = np.histogram(values, bins=10)
+        distributions.append(
+            {
+                "name": name,
+                "bins": [float(value) for value in bins],
+                "counts": [int(value) for value in counts],
+            }
+        )
+    return distributions
+
+
+def _build_dataset_stats(
+    X: np.ndarray,
+    y: np.ndarray,
+    feature_names: list[str],
+    target_name: str,
+) -> dict[str, Any]:
+    columns = []
+    for index, name in enumerate(feature_names):
+        columns.append(_summarize_column(name, X[:, index]))
+    columns.append(_summarize_column(target_name, y))
+
+    return {
+        "row_count": int(X.shape[0]),
+        "column_count": int(X.shape[1] + 1),
+        "target_name": target_name,
+        "columns": columns,
+        "distributions": _build_distributions(X, y, feature_names, target_name),
+    }
 
 
 def _extract_model_config(configuration: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -274,7 +348,7 @@ def _validate_numeric(param_name: str, param_spec: dict[str, Any], value: float)
     return value
 
 
-def _build_model(configuration: dict[str, Any]) -> Any:
+def _build_model(configuration: dict[str, Any]) -> tuple[Any, str, dict[str, Any]]:
     model_name, hyperparameters = _extract_model_config(configuration)
     spec = MODEL_SPECS.get(model_name)
     if spec is None:
@@ -290,7 +364,7 @@ def _build_model(configuration: dict[str, Any]) -> Any:
         if param_name not in param_specs:
             continue
         safe_params[param_name] = _coerce_param_value(param_name, param_specs[param_name], value)
-    return spec["class"](**safe_params)
+    return spec["class"](**safe_params), model_name, safe_params
 
 
 def _evaluate_model(
@@ -335,37 +409,71 @@ async def _upload_artifacts(run_id: int, model: Any, metrics: dict[str, Any]) ->
         )
 
 
-async def _process_message(message: RunMessage, http_client: httpx.AsyncClient) -> None:
+async def _send_run_results(
+    client: httpx.AsyncClient, run_id: int, payload: dict[str, Any], token: str
+) -> None:
+    response = await client.post(
+        f"/runs/{run_id}/results",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    response.raise_for_status()
+
+
+async def _send_run_failure(
+    client: httpx.AsyncClient, run_id: int, error: str | None, token: str
+) -> None:
+    response = await client.post(
+        f"/runs/{run_id}/failed",
+        json={"error": error},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    response.raise_for_status()
+
+
+async def _process_message(
+    message: RunMessage,
+    core_client: httpx.AsyncClient,
+    artifacts_client: httpx.AsyncClient,
+) -> None:
     token = _create_access_token(message.user_id)
     print("user id:", message.user_id)
-    await _update_run_status(http_client, message.run_id, "processing", token)
+    await _update_run_status(core_client, message.run_id, "processing", token)
     try:
-        model = _build_model(message.configuration)
+        model, model_name, model_params = _build_model(message.configuration)
         dataset_bytes = await _download_dataset(message.dataset_s3_path)
-        X, y = _load_arrays(dataset_bytes)
+        X, y, feature_names, target_name = _load_arrays(dataset_bytes)
+        dataset_stats = _build_dataset_stats(X, y, feature_names, target_name)
+        dataset_name = _extract_dataset_name(message.dataset_s3_path)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         model.fit(X_train, y_train)
         metrics = _evaluate_model(model, X_train, X_test, y_train, y_test)
         await _upload_artifacts(message.run_id, model, metrics)
-        await _update_run_status(http_client, message.run_id, "completed", token)
+        report_payload = {
+            "dataset_name": dataset_name,
+            "dataset_stats": dataset_stats,
+            "model": {"name": model_name, "parameters": model_params},
+            "metrics": metrics,
+        }
+        await _send_run_results(artifacts_client, message.run_id, report_payload, token)
         logger.info("run %s completed", message.run_id)
-    except InvalidModelParametersError:
+    except InvalidModelParametersError as exc:
         logger.warning("invalid model parameters for run %s", message.run_id, exc_info=True)
         try:
-            await _update_run_status(http_client, message.run_id, "failed", token)
+            await _send_run_failure(artifacts_client, message.run_id, str(exc), token)
         except Exception:
-            logger.exception("failed to update run %s status to failed", message.run_id)
+            logger.exception("failed to mark run %s as failed", message.run_id)
     except Exception:
         logger.exception("failed to process run %s", message.run_id)
         try:
-            await _update_run_status(http_client, message.run_id, "failed", token)
+            await _send_run_failure(artifacts_client, message.run_id, "training failed", token)
         except Exception:
-            logger.exception("failed to update run %s status to failed", message.run_id)
+            logger.exception("failed to mark run %s as failed", message.run_id)
 
 
 async def _consume(stop_event: asyncio.Event) -> None:
     consumer = _create_consumer()
-    async with _create_http_client() as http_client:
+    async with _create_core_client() as core_client, _create_artifacts_client() as artifacts_client:
         try:
             while not stop_event.is_set():
                 msg = await asyncio.to_thread(consumer.poll, 1.0)
@@ -384,7 +492,7 @@ async def _consume(stop_event: asyncio.Event) -> None:
                     consumer.commit(message=msg, asynchronous=False)
                     continue
 
-                await _process_message(run_message, http_client)
+                await _process_message(run_message, core_client, artifacts_client)
                 try:
                     consumer.commit(message=msg, asynchronous=False)
                 except KafkaException as exc:

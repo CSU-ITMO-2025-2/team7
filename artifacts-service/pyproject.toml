@@ -12,5 +12,6 @@ dependencies = [
     "sqlalchemy[asyncio,postgresql-asyncpg]>=2.0.45",
     "email-validator==2.3.0",
     "python-jose[cryptography]>=3.5.0",
+    "httpx>=0.28.1",
+    "reportlab>=4.4.7",
 ]
-
